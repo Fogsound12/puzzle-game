@@ -16,8 +16,8 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC','Micr
 .city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;max-width:800px;margin:0 auto;}
 .city-card{position:relative;border-radius:12px;overflow:hidden;background:#16213e;box-shadow:0 4px 15px rgba(0,0,0,.3);cursor:pointer;transition:transform .1s;aspect-ratio:4/3;will-change:transform;}
 .city-card:active{transform:scale(.93);}
-.city-card img{width:100%;height:100%;object-fit:cover;display:block;}
-.city-card .label{position:absolute;bottom:0;left:0;right:0;padding:8px 10px;background:linear-gradient(transparent,rgba(0,0,0,.8));font-size:14px;font-weight:600;text-align:center;}
+.city-card img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;}
+.city-card .label{position:absolute;bottom:0;left:0;right:0;padding:8px 10px;background:linear-gradient(transparent,rgba(0,0,0,.8));font-size:14px;font-weight:600;text-align:center;pointer-events:none;}
 
 /* ===== Puzzle Screen ===== */
 #puzzleScreen{position:fixed;inset:0;background:#1a1a2e;display:none;flex-direction:column;}
@@ -208,6 +208,7 @@ let state = {
   timerInterval: null,
   currentImage: null,
   isComplete: false,
+  _starting: false,  // guard against double-fire on mobile
 };
 
 // ===== Init City Grid =====
@@ -219,6 +220,7 @@ function initCityGrid() {
     card.className = 'city-card';
     card.innerHTML = `<img src="images/thumbs_${img.file}" alt="${img.name}" loading="lazy" decoding="async"><div class="label">${img.name}</div>`;
     card.addEventListener('click', () => startPuzzle(idx));
+    card.addEventListener('touchend', (e) => { e.preventDefault(); startPuzzle(idx); }, {passive:false});
     grid.appendChild(card);
   });
 }
@@ -258,6 +260,8 @@ function shuffle(arr) {
 
 // ===== Start Puzzle =====
 function startPuzzle(imgIdx) {
+  if (state._starting) return;
+  state._starting = true;
   // Show loading state immediately
   document.getElementById('selectScreen').style.display = 'none';
   document.getElementById('puzzleScreen').style.display = 'flex';
@@ -265,6 +269,7 @@ function startPuzzle(imgIdx) {
   // Load full image (no crossOrigin — same origin)
   const img = new Image();
   img.onload = () => {
+    state._starting = false;
     const allPieces = sliceImage(img);
     state.pieces = allPieces;
     state.placed = {};
@@ -285,6 +290,7 @@ function startPuzzle(imgIdx) {
       document.getElementById('timer').textContent = formatTime(state.timer);
     }, 1000);
   };
+  img.onerror = function() { state._starting = false; };
   img.src = `images/${IMAGES[imgIdx].file}`;
 }
 
