@@ -258,8 +258,12 @@ function shuffle(arr) {
 
 // ===== Start Puzzle =====
 function startPuzzle(imgIdx) {
+  // Show loading state immediately
+  document.getElementById('selectScreen').style.display = 'none';
+  document.getElementById('puzzleScreen').style.display = 'flex';
+  document.getElementById('timer').textContent = '加载中...';
+  // Load full image (no crossOrigin — same origin)
   const img = new Image();
-  img.crossOrigin = 'anonymous';
   img.onload = () => {
     const allPieces = sliceImage(img);
     state.pieces = allPieces;
@@ -272,8 +276,6 @@ function startPuzzle(imgIdx) {
     state.timer = 0;
     document.getElementById('timer').textContent = '00:00';
 
-    document.getElementById('selectScreen').style.display = 'none';
-    document.getElementById('puzzleScreen').style.display = 'flex';
     document.getElementById('refImg').src = `images/${IMAGES[imgIdx].file}`;
 
     renderGrid();
@@ -528,6 +530,16 @@ function downloadCert() {
   a.download = 'certificate.jpg';
   a.click();
 }
+
+// ===== Preload puzzle images for instant first click =====
+function preloadPuzzleImages() {
+  // Preload first 6 cards (above fold on mobile) into browser cache
+  IMAGES.slice(0, 6).forEach(function(img) {
+    var el = new Image();
+    el.src = 'images/' + img.file;
+  });
+}
+preloadPuzzleImages();
 
 // ===== Init =====
 initCityGrid();
