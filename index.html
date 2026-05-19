@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>浙江寻宝记 - 拼图游戏</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:#1a1a2e;color:#fff;touch-action:manipulation;-webkit-user-select:none;user-select:none;}
+
+/* ===== Select Screen ===== */
+#selectScreen{position:fixed;inset:0;overflow-y:auto;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);padding:20px 16px 40px;}
+#selectScreen h1{text-align:center;font-size:28px;font-weight:700;margin:10px 0 4px;background:linear-gradient(135deg,#f7971e,#ffd200);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+#selectScreen p{text-align:center;font-size:14px;color:#aaa;margin-bottom:20px;}
+.city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;max-width:800px;margin:0 auto;}
+.city-card{position:relative;border-radius:12px;overflow:hidden;background:#16213e;box-shadow:0 4px 15px rgba(0,0,0,.3);cursor:pointer;transition:transform .2s,box-shadow .2s;aspect-ratio:4/3;}
+.city-card:active{transform:scale(.95);}
+.city-card img{width:100%;height:100%;object-fit:cover;display:block;}
+.city-card .label{position:absolute;bottom:0;left:0;right:0;padding:8px 10px;background:linear-gradient(transparent,rgba(0,0,0,.8));font-size:14px;font-weight:600;text-align:center;}
+
+/* ===== Puzzle Screen ===== */
+#puzzleScreen{position:fixed;inset:0;background:#1a1a2e;display:none;flex-direction:column;}
+.puzzle-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#16213e;border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0;}
+.puzzle-header .btn-back{background:none;border:none;color:#fff;font-size:16px;cursor:pointer;padding:6px 12px;border-radius:8px;transition:background .2s;}
+.puzzle-header .btn-back:hover{background:rgba(255,255,255,.1);}
+.puzzle-header .timer{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;color:#ffd200;}
+.puzzle-header .btn-ref{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;font-size:13px;cursor:pointer;padding:6px 12px;border-radius:8px;transition:background .2s;}
+
+/* Reference image */
+#refOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:100;justify-content:center;align-items:center;}
+#refOverlay.show{display:flex;}
+#refOverlay img{max-width:90vw;max-height:80vh;border-radius:8px;box-shadow:0 0 30px rgba(0,0,0,.5);}
+#refOverlay .close-ref{position:absolute;top:20px;right:20px;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:24px;width:44px;height:44px;border-radius:50%;cursor:pointer;}
+
+/* Puzzle area */
+.puzzle-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;overflow:hidden;}
+.puzzle-grid{position:relative;width:min(85vw,85vh - 200px);aspect-ratio:4/3;background:#0f0f23;border-radius:8px;border:2px solid rgba(255,255,255,.15);}
+.grid-slot{position:absolute;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);border-radius:3px;transition:background .3s;display:flex;align-items:center;justify-content:center;font-size:24px;color:rgba(255,255,255,.15);}
+.grid-slot.filled{border-color:transparent;background:transparent;}
+.grid-slot.highlight{background:rgba(255,215,0,.15);border-color:#ffd200;}
+
+/* Tray */
+.tray{flex-shrink:0;padding:10px 12px;background:#16213e;border-top:1px solid rgba(255,255,255,.1);}
+.tray-label{font-size:12px;color:#888;margin-bottom:8px;text-align:center;}
+.tray-pieces{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;min-height:60px;}
+.tray-piece{width:56px;height:56px;border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:transform .15s,border-color .2s;box-shadow:0 2px 8px rgba(0,0,0,.3);flex-shrink:0;}
+.tray-piece:active{transform:scale(.9);}
+.tray-piece.selected{border-color:#ffd200;transform:scale(1.1);}
+.tray-piece img{width:100%;height:100%;display:block;object-fit:cover;pointer-events:none;}
+.tray-empty{color:#555;font-size:13px;padding:16px;text-align:center;}
+
+/* Win modal */
+#winModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;justify-content:center;align-items:center;}
+#winModal.show{display:flex;}
+.win-box{background:linear-gradient(135deg,#16213e,#1a1a3e);border-radius:20px;padding:40px 32px;text-align:center;max-width:340px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.5);border:1px solid rgba(255,215,0,.3);}
+.win-box h2{font-size:28px;margin-bottom:8px;background:linear-gradient(135deg,#f7971e,#ffd200);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.win-box .trophy{font-size:64px;margin-bottom:8px;}
+.win-box .final-time{font-size:32px;font-weight:700;color:#ffd200;margin:12px 0 20px;}
+.win-box .btn-group{display:flex;flex-direction:column;gap:10px;}
+.win-box .btn-group button{padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:transform .2s;}
+.win-box .btn-group button:active{transform:scale(.97);}
+.win-box .btn-replay{background:linear-gradient(135deg,#f7971e,#ffd200);color:#1a1a2e;}
+.win-box .btn-menu{background:rgba(255,255,255,.1);color:#fff;}
+
+/* Confetti */
+.confetti{position:fixed;width:10px;height:10px;top:-10px;z-index:300;animation:fall linear forwards;pointer-events:none;}
+@keyframes fall{to{transform:translateY(100vh) rotate(720deg);}}
+
+/* Responsive */
+@media(min-width:768px){
+  .city-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));}
+  .puzzle-grid{width:min(50vw,500px);}
+  .tray-piece{width:72px;height:72px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== Select Screen ===== -->
+<div id="selectScreen">
+  <h1>🏮 浙江寻宝记</h1>
+  <p>选择一座城市，开始拼图挑战</p>
+  <div class="city-grid" id="cityGrid"></div>
+</div>
+
+<!-- ===== Puzzle Screen ===== -->
+<div id="puzzleScreen">
+  <div class="puzzle-header">
+    <button class="btn-back" id="btnBack">← 返回</button>
+    <span class="timer" id="timer">00:00</span>
+    <button class="btn-ref" id="btnRef">👁 参考</button>
+  </div>
+  <div class="puzzle-body">
+    <div class="puzzle-grid" id="puzzleGrid"></div>
+  </div>
+  <div class="tray">
+    <div class="tray-label">👆 点击碎片，再点击格子放置</div>
+    <div class="tray-pieces" id="tray"></div>
+  </div>
+</div>
+
+<!-- Reference overlay -->
+<div id="refOverlay">
+  <button class="close-ref" id="closeRef">✕</button>
+  <img id="refImg" alt="reference">
+</div>
+
+<!-- Win modal -->
+<div id="winModal">
+  <div class="win-box">
+    <div class="trophy">🎉</div>
+    <h2>拼图完成！</h2>
+    <div class="final-time" id="finalTime">00:00</div>
+    <div class="btn-group">
+      <button class="btn-replay" id="btnReplay">🔄 再玩一次</button>
+      <button class="btn-menu" id="btnMenu">🏠 返回选城市</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Config =====
+const ROWS = 3;
+const COLS = 4;
+const TOTAL = 12;
+const IMAGES = [
+  { file: 'VCG211178240184.jpg', name: '城市风光 · 壹' },
+  { file: 'VCG211560176644.jpg', name: '城市风光 · 贰' },
+  { file: 'VCG211343690953.jpg', name: '城市风光 · 叁' },
+  { file: 'VCG211532739246.jpg', name: '城市风光 · 肆' },
+  { file: 'VCG211585482521.jpg', name: '城市风光 · 伍' },
+  { file: 'VCG211480698764.jpg', name: '城市风光 · 陆' },
+  { file: 'VCG211441857941.jpg', name: '城市风光 · 柒' },
+  { file: 'VCG211438121898.jpg', name: '城市风光 · 捌' },
+  { file: 'VCG211343940394.jpg', name: '城市风光 · 玖' },
+  { file: 'VCG211486589091.jpg', name: '城市风光 · 拾' },
+  { file: 'VCG211337212104.jpg', name: '城市风光 · 拾壹' },
+];
+
+// ===== State =====
+let state = {
+  pieces: [],        // { id, row, col, dataUrl }
+  placed: {},        // 'row-col' -> piece id
+  selected: null,    // piece id
+  timer: 0,
+  timerInterval: null,
+  currentImage: null,
+  isComplete: false,
+};
+
+// ===== Init City Grid =====
+function initCityGrid() {
+  const grid = document.getElementById('cityGrid');
+  grid.innerHTML = '';
+  IMAGES.forEach((img, idx) => {
+    const card = document.createElement('div');
+    card.className = 'city-card';
+    card.innerHTML = `<img src="images/${img.file}" alt="${img.name}" loading="lazy"><div class="label">${img.name}</div>`;
+    card.addEventListener('click', () => startPuzzle(idx));
+    grid.appendChild(card);
+  });
+}
+
+// ===== Slice image into pieces =====
+function sliceImage(img) {
+  const pw = img.naturalWidth / COLS;
+  const ph = img.naturalHeight / ROWS;
+  const cw = 120, ch = Math.round(120 * ph / pw);
+  const pieces = [];
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const canvas = document.createElement('canvas');
+      canvas.width = cw;
+      canvas.height = ch;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, c * pw, r * ph, pw, ph, 0, 0, cw, ch);
+      pieces.push({ id: `${r}-${c}`, row: r, col: c, dataUrl: canvas.toDataURL() });
+    }
+  }
+  return pieces;
+}
+
+// ===== Shuffle =====
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  // ensure not identical to original
+  if (a.every((p, idx) => p.id === arr[idx].id)) {
+    [a[0], a[1]] = [a[1], a[0]];
+  }
+  return a;
+}
+
+// ===== Start Puzzle =====
+function startPuzzle(imgIdx) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const allPieces = sliceImage(img);
+    state.pieces = allPieces;
+    state.placed = {};
+    state.selected = null;
+    state.isComplete = false;
+    state.currentImage = imgIdx;
+    state.pieceAspect = (img.naturalWidth / COLS) / (img.naturalHeight / ROWS);
+    clearInterval(state.timerInterval);
+    state.timer = 0;
+    document.getElementById('timer').textContent = '00:00';
+
+    document.getElementById('selectScreen').style.display = 'none';
+    document.getElementById('puzzleScreen').style.display = 'flex';
+    document.getElementById('refImg').src = `images/${IMAGES[imgIdx].file}`;
+
+    renderGrid();
+    renderTray(shuffle(allPieces));
+    state.timerInterval = setInterval(() => {
+      state.timer++;
+      document.getElementById('timer').textContent = formatTime(state.timer);
+    }, 1000);
+  };
+  img.src = `images/${IMAGES[imgIdx].file}`;
+}
+
+// ===== Render Grid =====
+function renderGrid() {
+  const grid = document.getElementById('puzzleGrid');
+  grid.innerHTML = '';
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const slot = document.createElement('div');
+      slot.className = 'grid-slot';
+      slot.dataset.row = r;
+      slot.dataset.col = c;
+      const wp = 100 / COLS;
+      const hp = 100 / ROWS;
+      slot.style.width = wp + '%';
+      slot.style.height = hp + '%';
+      slot.style.left = (c * wp) + '%';
+      slot.style.top = (r * hp) + '%';
+      slot.addEventListener('click', () => onSlotClick(r, c));
+      grid.appendChild(slot);
+    }
+  }
+  updateGridFill();
+}
+
+// ===== Update Grid Fill =====
+function updateGridFill() {
+  const slots = document.querySelectorAll('.grid-slot');
+  slots.forEach(slot => {
+    const r = parseInt(slot.dataset.row);
+    const c = parseInt(slot.dataset.col);
+    const key = `${r}-${c}`;
+    const pid = state.placed[key];
+    if (pid) {
+      const piece = state.pieces.find(p => p.id === pid);
+      slot.classList.add('filled');
+      slot.innerHTML = `<img src="${piece.dataUrl}" style="width:100%;height:100%;display:block;object-fit:cover;pointer-events:none;">`;
+    } else {
+      slot.classList.remove('filled');
+      slot.innerHTML = '';
+    }
+  });
+}
+
+// ===== Render Tray =====
+function renderTray(pieces) {
+  const tray = document.getElementById('tray');
+  tray.innerHTML = '';
+  const unplaced = pieces.filter(p => !Object.values(state.placed).includes(p.id));
+  if (unplaced.length === 0) {
+    tray.innerHTML = '<div class="tray-empty">✅ 全部放置完成！</div>';
+    return;
+  }
+  const tpH = 64, tpW = Math.round(tpH * (state.pieceAspect || 1));
+  unplaced.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'tray-piece' + (state.selected === p.id ? ' selected' : '');
+    div.dataset.pieceId = p.id;
+    div.style.width = tpW + 'px';
+    div.style.height = tpH + 'px';
+    div.innerHTML = `<img src="${p.dataUrl}" alt="piece">`;
+    div.addEventListener('click', () => onTrayClick(p.id));
+    tray.appendChild(div);
+  });
+}
+
+// ===== Tray click =====
+function onTrayClick(pieceId) {
+  if (state.isComplete) return;
+  if (state.selected === pieceId) {
+    state.selected = null;
+  } else {
+    state.selected = pieceId;
+  }
+  updateSelection();
+}
+
+// ===== Slot click =====
+function onSlotClick(row, col) {
+  if (state.isComplete) return;
+  const key = `${row}-${col}`;
+  if (state.placed[key]) {
+    // Remove placed piece back to tray
+    const pid = state.placed[key];
+    delete state.placed[key];
+    state.selected = pid;
+    updateGridFill();
+    updateSelection();
+    renderTray(state.pieces);
+    return;
+  }
+  if (!state.selected) return;
+  // Place piece
+  state.placed[key] = state.selected;
+  state.selected = null;
+  updateGridFill();
+  renderTray(state.pieces);
+  checkWin();
+}
+
+// ===== Update Selection Highlight =====
+function updateSelection() {
+  document.querySelectorAll('.tray-piece').forEach(el => {
+    el.classList.toggle('selected', el.dataset.pieceId === state.selected);
+  });
+}
+
+// ===== Check Win =====
+function checkWin() {
+  if (Object.keys(state.placed).length === TOTAL) {
+    state.isComplete = true;
+    clearInterval(state.timerInterval);
+    setTimeout(() => {
+      document.getElementById('finalTime').textContent = formatTime(state.timer);
+      document.getElementById('winModal').classList.add('show');
+      spawnConfetti();
+    }, 300);
+  }
+}
+
+// ===== Confetti =====
+function spawnConfetti() {
+  const colors = ['#ffd200','#f7971e','#ff6b6b','#48dbfb','#ff9ff3','#54a0ff','#5f27cd'];
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti';
+    el.style.left = Math.random() * 100 + 'vw';
+    el.style.background = colors[Math.floor(Math.random() * colors.length)];
+    el.style.width = (6 + Math.random() * 8) + 'px';
+    el.style.height = (6 + Math.random() * 8) + 'px';
+    el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    el.style.animationDuration = (2 + Math.random() * 3) + 's';
+    el.style.animationDelay = Math.random() * 2 + 's';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 5000);
+  }
+}
+
+// ===== Format Time =====
+function formatTime(sec) {
+  const m = String(Math.floor(sec / 60)).padStart(2, '0');
+  const s = String(sec % 60).padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+// ===== Event Listeners =====
+document.getElementById('btnBack').addEventListener('click', () => {
+  clearInterval(state.timerInterval);
+  document.getElementById('puzzleScreen').style.display = 'none';
+  document.getElementById('selectScreen').style.display = 'block';
+});
+
+document.getElementById('btnReplay').addEventListener('click', () => {
+  document.getElementById('winModal').classList.remove('show');
+  startPuzzle(state.currentImage);
+});
+
+document.getElementById('btnMenu').addEventListener('click', () => {
+  document.getElementById('winModal').classList.remove('show');
+  document.getElementById('puzzleScreen').style.display = 'none';
+  document.getElementById('selectScreen').style.display = 'block';
+});
+
+document.getElementById('btnRef').addEventListener('click', () => {
+  document.getElementById('refOverlay').classList.add('show');
+});
+document.getElementById('closeRef').addEventListener('click', () => {
+  document.getElementById('refOverlay').classList.remove('show');
+});
+document.getElementById('refOverlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) document.getElementById('refOverlay').classList.remove('show');
+});
+
+// ===== Init =====
+initCityGrid();
+</script>
+</body>
+</html>
