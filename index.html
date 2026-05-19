@@ -3,17 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="preconnect" href="https://fogsound12.github.io">
 <title>浙江寻宝记云上展 - 拼图游戏</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:#1a1a2e;color:#fff;touch-action:manipulation;-webkit-user-select:none;user-select:none;}
 
 /* ===== Select Screen ===== */
-#selectScreen{position:fixed;inset:0;overflow-y:auto;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);padding:20px 16px 40px;}
+#selectScreen{position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);padding:20px 16px 40px;}
 #selectScreen h1{text-align:center;font-size:28px;font-weight:700;margin:10px 0 4px;background:linear-gradient(135deg,#f7971e,#ffd200);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
 #selectScreen p{text-align:center;font-size:14px;color:#aaa;margin-bottom:20px;}
-.city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;max-width:800px;margin:0 auto;}
-.city-card{position:relative;border-radius:12px;overflow:hidden;background:#16213e;box-shadow:0 4px 15px rgba(0,0,0,.3);cursor:pointer;transition:transform .2s,box-shadow .2s;aspect-ratio:4/3;}
+.city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;max-width:800px;margin:0 auto;content-visibility:auto;contain:style layout;}
+.city-card{position:relative;border-radius:12px;overflow:hidden;background:#16213e;box-shadow:0 4px 15px rgba(0,0,0,.3);cursor:pointer;transition:transform .2s,box-shadow .2s;aspect-ratio:4/3;contain:style layout;}
 .city-card:active{transform:scale(.95);}
 .city-card img{width:100%;height:100%;object-fit:cover;display:block;}
 .city-card .label{position:absolute;bottom:0;left:0;right:0;padding:8px 10px;background:linear-gradient(transparent,rgba(0,0,0,.8));font-size:14px;font-weight:600;text-align:center;}
@@ -34,7 +35,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC','Micr
 
 /* Puzzle area */
 .puzzle-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;overflow:hidden;}
-.puzzle-grid{position:relative;width:min(85vw,85vh - 200px);aspect-ratio:4/3;background:#0f0f23;border-radius:8px;border:2px solid rgba(255,255,255,.15);}
+.puzzle-grid{position:relative;width:min(85vw,85vh - 200px);aspect-ratio:4/3;background:#0f0f23;border-radius:8px;border:2px solid rgba(255,255,255,.15);will-change:transform;}
 .grid-slot{position:absolute;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);border-radius:3px;transition:background .3s;display:flex;align-items:center;justify-content:center;font-size:24px;color:rgba(255,255,255,.15);}
 .grid-slot.filled{border-color:transparent;background:transparent;}
 .grid-slot.highlight{background:rgba(255,215,0,.15);border-color:#ffd200;}
@@ -89,8 +90,6 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC','Micr
 #imgPreview .preview-actions{display:flex;gap:12px;}
 #imgPreview .preview-actions button{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;}
 #imgPreview .preview-actions button:active{background:rgba(255,255,255,.3);}
-.food-box .btn-food-close:active{background:rgba(255,215,0,.3);}
-
 /* Responsive */
 @media(min-width:768px){
   .city-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));}
@@ -215,7 +214,7 @@ function initCityGrid() {
   IMAGES.forEach((img, idx) => {
     const card = document.createElement('div');
     card.className = 'city-card';
-    card.innerHTML = `<img src="images/${img.file}" alt="${img.name}" loading="lazy"><div class="label">${img.name}</div>`;
+    card.innerHTML = `<img src="images/${img.file}" alt="${img.name}" loading="lazy" decoding="async"><div class="label">${img.name}</div>`;
     card.addEventListener('click', () => startPuzzle(idx));
     grid.appendChild(card);
   });
@@ -225,7 +224,7 @@ function initCityGrid() {
 function sliceImage(img) {
   const pw = img.naturalWidth / COLS;
   const ph = img.naturalHeight / ROWS;
-  const cw = 120, ch = Math.round(120 * ph / pw);
+  const cw = 80, ch = Math.round(80 * ph / pw);
   const pieces = [];
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
@@ -338,7 +337,7 @@ function updateGridFill() {
       } else {
         slot.classList.add('wrong');
       }
-      slot.innerHTML = `<img src="${piece.dataUrl}" style="width:100%;height:100%;display:block;object-fit:cover;pointer-events:none;">`;
+      slot.innerHTML = `<img src="${piece.dataUrl}" decoding="async" style="width:100%;height:100%;display:block;object-fit:cover;pointer-events:none;">`;
     } else {
       slot.classList.remove('filled');
       slot.innerHTML = '';
@@ -446,8 +445,9 @@ function checkWin() {
 
 // ===== Confetti =====
 function spawnConfetti() {
+  const isMobile = window.innerWidth < 480;
   const colors = ['#ffd200','#f7971e','#ff6b6b','#48dbfb','#ff9ff3','#54a0ff','#5f27cd'];
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < (isMobile ? 25 : 60); i++) {
     const el = document.createElement('div');
     el.className = 'confetti';
     el.style.left = Math.random() * 100 + 'vw';
