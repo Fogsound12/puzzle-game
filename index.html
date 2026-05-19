@@ -68,6 +68,18 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC','Micr
 .confetti{position:fixed;width:10px;height:10px;top:-10px;z-index:300;animation:fall linear forwards;pointer-events:none;}
 @keyframes fall{to{transform:translateY(100vh) rotate(720deg);}}
 
+/* Food info overlay */
+#foodOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:250;justify-content:center;align-items:center;}
+#foodOverlay.show{display:flex;}
+.food-box{background:linear-gradient(135deg,#1a1a3e,#2a1a3e);border-radius:20px;padding:28px 24px;max-width:340px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.5);border:1px solid rgba(255,215,0,.25);text-align:center;animation:fadeUp .5s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+.food-box .unlock-msg{font-size:16px;color:#ffd200;font-weight:600;margin-bottom:16px;line-height:1.6;}
+.food-box .food-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:12px;}
+.food-box .food-list{text-align:left;font-size:14px;color:#ccc;line-height:1.8;margin-bottom:16px;padding:0 4px;}
+.food-box .food-list span.label{color:#ffd200;font-weight:600;}
+.food-box .btn-food-close{background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.3);color:#ffd200;padding:10px 28px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;}
+.food-box .btn-food-close:active{background:rgba(255,215,0,.3);}
+
 /* Responsive */
 @media(min-width:768px){
   .city-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));}
@@ -120,6 +132,16 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC','Micr
   </div>
 </div>
 
+<!-- Food info overlay -->
+<div id="foodOverlay">
+  <div class="food-box" id="foodBox">
+    <div class="unlock-msg" id="unlockMsg"></div>
+    <div class="food-title" id="foodTitle"></div>
+    <div class="food-list" id="foodList"></div>
+    <button class="btn-food-close" id="btnFoodClose">知道了</button>
+  </div>
+</div>
+
 <script>
 // ===== Config =====
 const ROWS = 3;
@@ -138,6 +160,21 @@ const IMAGES = [
   { file: 'VCG211486589091.jpg', name: '舟山' },
   { file: 'VCG211337212104.jpg', name: '台州' },
 ];
+
+// ===== City Food Data =====
+const CITY_FOOD = {
+  '杭州': { title: '杭州美食图鉴', lines: ['特色美食：葱包桧、片儿川', '代表品牌：知味观'] },
+  '宁波': { title: '宁波美食图鉴', lines: ['特色美食：宁波汤圆、水磨年糕', '代表品牌：缸鸭狗、楼茂记'] },
+  '温州': { title: '温州美食图鉴', lines: ['特色美食：温州糯米饭、温州鱼丸', '地域特色：山海风味经典市井小吃'] },
+  '嘉兴': { title: '嘉兴美食图鉴', lines: ['特色美食：嘉兴肉粽、定胜糕', '代表品牌：五芳斋'] },
+  '湖州': { title: '湖州美食图鉴', lines: ['特色美食：南浔羊肉面、千张包子', '代表品牌：丁莲芳'] },
+  '绍兴': { title: '绍兴美食图鉴', lines: ['特色美食：绍兴臭豆腐、茴香豆', '地域特色：黄酒风味经典小吃'] },
+  '金华': { title: '金华美食图鉴', lines: ['特色美食：金华火腿、梅干菜酥饼', '地域名片：金华火腿'] },
+  '衢州': { title: '衢州美食图鉴', lines: ['特色美食：三头一掌、龙游发糕', '地域特色：浙西风味香辣小吃'] },
+  '舟山': { title: '舟山美食图鉴', lines: ['特色美食：舟山海鲜面、即食海味', '地域特色：海岛特色海鲜零食'] },
+  '台州': { title: '台州美食图鉴', lines: ['特色美食：临海海苔饼、天台饺饼筒', '地域特色：江南地道民间小吃'] },
+  '丽水': { title: '丽水美食图鉴', lines: ['特色美食：缙云烧饼、遂昌长粽', '非遗美食：缙云烧饼'] },
+};
 
 // ===== State =====
 let state = {
@@ -354,15 +391,34 @@ function updateSelection() {
   });
 }
 
+// ===== Show Food Info =====
+function showFoodInfo(cityName) {
+  const food = CITY_FOOD[cityName];
+  if (!food) return;
+  document.getElementById('unlockMsg').textContent = `✨ 恭喜成功解锁${cityName}的美食记忆！`;
+  document.getElementById('foodTitle').textContent = food.title;
+  document.getElementById('foodList').innerHTML = food.lines.map(l => `<div>${l}</div>`).join('');
+  // Delay 1s then show
+  setTimeout(() => {
+    document.getElementById('foodOverlay').classList.add('show');
+    const box = document.getElementById('foodBox');
+    box.style.animation = 'none';
+    void box.offsetHeight;
+    box.style.animation = 'fadeUp .5s ease';
+  }, 1000);
+}
+
 // ===== Check Win =====
 function checkWin() {
   if (countCorrect() === TOTAL) {
     state.isComplete = true;
     clearInterval(state.timerInterval);
+    const cityName = IMAGES[state.currentImage].name;
     setTimeout(() => {
       document.getElementById('finalTime').textContent = formatTime(state.timer);
       document.getElementById('winModal').classList.add('show');
       spawnConfetti();
+      showFoodInfo(cityName);
     }, 300);
   }
 }
@@ -418,6 +474,13 @@ document.getElementById('closeRef').addEventListener('click', () => {
 });
 document.getElementById('refOverlay').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) document.getElementById('refOverlay').classList.remove('show');
+});
+
+document.getElementById('btnFoodClose').addEventListener('click', () => {
+  document.getElementById('foodOverlay').classList.remove('show');
+});
+document.getElementById('foodOverlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) document.getElementById('foodOverlay').classList.remove('show');
 });
 
 // ===== Init =====
