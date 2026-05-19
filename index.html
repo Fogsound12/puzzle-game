@@ -77,8 +77,18 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC','Micr
 .food-box .food-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:12px;}
 .food-box .food-list{text-align:left;font-size:14px;color:#ccc;line-height:1.8;margin-bottom:16px;padding:0 4px;}
 .food-box .food-list span.label{color:#ffd200;font-weight:600;}
-.food-box .food-cert{width:80px;height:auto;border-radius:8px;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,.4);border:2px solid rgba(255,215,0,.3);}
+.food-box .food-cert{width:80px;height:auto;border-radius:8px;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,.4);border:2px solid rgba(255,215,0,.3);cursor:pointer;transition:transform .2s;}
+.food-box .food-cert:active{transform:scale(.95);}
 .food-box .btn-food-close{background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.3);color:#ffd200;padding:10px 28px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;}
+.food-box .btn-food-close:active{background:rgba(255,215,0,.3);}
+
+/* Image preview overlay */
+#imgPreview{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:300;justify-content:center;align-items:center;flex-direction:column;gap:16px;}
+#imgPreview.show{display:flex;}
+#imgPreview img{max-width:90vw;max-height:75vh;border-radius:8px;box-shadow:0 0 30px rgba(0,0,0,.5);object-fit:contain;}
+#imgPreview .preview-actions{display:flex;gap:12px;}
+#imgPreview .preview-actions button{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;}
+#imgPreview .preview-actions button:active{background:rgba(255,255,255,.3);}
 .food-box .btn-food-close:active{background:rgba(255,215,0,.3);}
 
 /* Responsive */
@@ -141,6 +151,15 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC','Micr
     <div class="food-title" id="foodTitle"></div>
     <div class="food-list" id="foodList"></div>
     <button class="btn-food-close" id="btnFoodClose">知道了</button>
+  </div>
+</div>
+
+<!-- Image preview overlay -->
+<div id="imgPreview">
+  <img id="previewImg" src="images/cert.jpg" alt="奖状">
+  <div class="preview-actions">
+    <button id="btnDownload">⬇ 下载</button>
+    <button id="btnClosePreview">✕ 关闭</button>
   </div>
 </div>
 
@@ -483,6 +502,25 @@ document.getElementById('btnFoodClose').addEventListener('click', () => {
 });
 document.getElementById('foodOverlay').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) document.getElementById('foodOverlay').classList.remove('show');
+});
+
+// ===== Image Preview =====
+document.querySelector('.food-cert').addEventListener('click', () => {
+  document.getElementById('imgPreview').classList.add('show');
+});
+document.getElementById('btnClosePreview').addEventListener('click', () => {
+  document.getElementById('imgPreview').classList.remove('show');
+});
+document.getElementById('imgPreview').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) document.getElementById('imgPreview').classList.remove('show');
+});
+document.getElementById('btnDownload').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = 'images/cert.jpg';
+  a.download = '奖状.jpg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 });
 
 // ===== Init =====
