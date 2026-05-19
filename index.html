@@ -38,6 +38,8 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC','Micr
 .grid-slot{position:absolute;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);border-radius:3px;transition:background .3s;display:flex;align-items:center;justify-content:center;font-size:24px;color:rgba(255,255,255,.15);}
 .grid-slot.filled{border-color:transparent;background:transparent;}
 .grid-slot.highlight{background:rgba(255,215,0,.15);border-color:#ffd200;}
+.grid-slot.correct{background:rgba(0,255,100,.12);border-color:rgba(0,255,100,.5)!important;}
+.grid-slot.wrong{background:rgba(255,50,50,.12);border-color:rgba(255,50,50,.5)!important;}
 
 /* Tray */
 .tray{flex-shrink:0;padding:10px 12px;background:#16213e;border-top:1px solid rgba(255,255,255,.1);}
@@ -94,7 +96,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'PingFang SC','Micr
     <div class="puzzle-grid" id="puzzleGrid"></div>
   </div>
   <div class="tray">
-    <div class="tray-label">👆 点击碎片，再点击格子放置</div>
+    <div class="tray-label">正确: <span id="correctCount">0/12</span> &nbsp;•&nbsp; 👆 点击碎片，再点击格子放置</div>
     <div class="tray-pieces" id="tray"></div>
   </div>
 </div>
@@ -247,6 +249,20 @@ function renderGrid() {
   updateGridFill();
 }
 
+// ===== Check if piece is in correct position =====
+function isPieceCorrect(slotKey, pieceId) {
+  return slotKey === pieceId;
+}
+
+// ===== Count correct placements =====
+function countCorrect() {
+  let n = 0;
+  for (const [key, pid] of Object.entries(state.placed)) {
+    if (isPieceCorrect(key, pid)) n++;
+  }
+  return n;
+}
+
 // ===== Update Grid Fill =====
 function updateGridFill() {
   const slots = document.querySelectorAll('.grid-slot');
@@ -255,15 +271,24 @@ function updateGridFill() {
     const c = parseInt(slot.dataset.col);
     const key = `${r}-${c}`;
     const pid = state.placed[key];
+    slot.classList.remove('correct', 'wrong');
     if (pid) {
       const piece = state.pieces.find(p => p.id === pid);
       slot.classList.add('filled');
+      if (isPieceCorrect(key, pid)) {
+        slot.classList.add('correct');
+      } else {
+        slot.classList.add('wrong');
+      }
       slot.innerHTML = `<img src="${piece.dataUrl}" style="width:100%;height:100%;display:block;object-fit:cover;pointer-events:none;">`;
     } else {
       slot.classList.remove('filled');
       slot.innerHTML = '';
     }
   });
+  // Update counter
+  const c = countCorrect();
+  document.getElementById('correctCount').textContent = `${c}/${TOTAL}`;
 }
 
 // ===== Render Tray =====
@@ -331,7 +356,7 @@ function updateSelection() {
 
 // ===== Check Win =====
 function checkWin() {
-  if (Object.keys(state.placed).length === TOTAL) {
+  if (countCorrect() === TOTAL) {
     state.isComplete = true;
     clearInterval(state.timerInterval);
     setTimeout(() => {
